@@ -1,28 +1,35 @@
+import 'package:ecommerce/core/di/service_locator.dart';
 import 'package:ecommerce/core/resources/assets_manager.dart';
 import 'package:ecommerce/core/resources/color_manager.dart';
 import 'package:ecommerce/core/resources/styles_manager.dart';
 import 'package:ecommerce/core/widgets/custom_elevated_button.dart';
 import 'package:ecommerce/core/widgets/product_counter.dart';
+import 'package:ecommerce/features/products/domain/entities/product.dart';
+import 'package:ecommerce/features/products/presentation/cubit/products_cubit.dart';
+import 'package:ecommerce/features/products/presentation/cubit/products_states.dart';
 import 'package:ecommerce/features/products/presentation/widgets/product_description.dart';
 import 'package:ecommerce/features/products/presentation/widgets/product_image.dart';
 import 'package:ecommerce/features/products/presentation/widgets/product_label.dart';
 import 'package:ecommerce/features/products/presentation/widgets/product_rating.dart';
 import 'package:ecommerce/features/products/presentation/widgets/product_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class ProductDetails extends StatefulWidget {
-  const ProductDetails();
+class ProductDetailsScreen extends StatefulWidget {
+  const ProductDetailsScreen();
 
   @override
-  State<ProductDetails> createState() => _ProductDetailsState();
+  State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
-class _ProductDetailsState extends State<ProductDetails> {
-  int _quantity = 1;
+class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  final _productsCubit = serviceLocator.get<ProductsCubit>();
 
   @override
   Widget build(BuildContext context) {
+    final product = ModalRoute.of(context)!.settings.arguments as Product;
+
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -60,39 +67,35 @@ class _ProductDetailsState extends State<ProductDetails> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ProductSlider(
-                items: [
-                  'https://pl.kicksmaniac.com/zdjecia/2022/08/23/508/43/NIKE_AIR_JORDAN_1_RETRO_HIGH_GS_RARE_AIR_MAX_ORANGE-mini.jpg',
-                  'https://pl.kicksmaniac.com/zdjecia/2022/08/23/508/43/NIKE_AIR_JORDAN_1_RETRO_HIGH_GS_RARE_AIR_MAX_ORANGE-mini.jpg',
-                ].map((imageURL) => ProductImage(imageUrl: imageURL)).toList(),
+                items: product.imagesURLs
+                    .map((imageURL) => ProductImage(imageUrl: imageURL))
+                    .toList(),
                 initialIndex: 0,
               ),
               SizedBox(height: 24.h),
-              const ProductLabel(
-                name: 'Nike Air Jordon Nike shoes flexible for wo..',
-                price: 'EGP 399',
+              ProductLabel(
+                name: product.title,
+                price: 'EGP ${product.priceAfterDiscount ?? product.price}',
               ),
               SizedBox(height: 16.h),
               Row(
                 children: [
-                  const Expanded(
-                    child: ProductRating(buyers: '1324', rating: '4.8 (853)'),
+                  Expanded(
+                    child: ProductRating(
+                      buyers: '${product.sold}',
+                      rating:
+                          '${product.ratingsAverage} (${product.ratingsQuantity})',
+                    ),
                   ),
                   ProductCounter(
-                    initialValue: _quantity,
-                    onIncrement: (value) {
-                      _quantity = value;
-                    },
-                    onDecrement: (value) {
-                      _quantity = value;
-                    },
+                    initialValue: _productsCubit.productQuantity,
+                    onIncrement: _productsCubit.changeProductQuantity,
+                    onDecrement: _productsCubit.changeProductQuantity,
                   ),
                 ],
               ),
               SizedBox(height: 16.h),
-              const ProductDescription(
-                description:
-                    'Nike is a multinational corporation that designs, develops, and sells athletic footwear ,apparel, and accessories.',
-              ),
+              ProductDescription(description: product.description),
               SizedBox(height: 48.h),
               Row(
                 children: [
@@ -105,11 +108,18 @@ class _ProductDetailsState extends State<ProductDetails> {
                         ).copyWith(fontSize: 18.sp),
                       ),
                       SizedBox(height: 12.h),
-                      Text(
-                        'EGP 399',
-                        style: getMediumStyle(
-                          color: ColorManager.appBarTitle,
-                        ).copyWith(fontSize: 18.sp),
+                      BlocProvider(
+                        create: (_) => _productsCubit,
+                        child: BlocBuilder<ProductsCubit, ProductsState>(
+                          builder: (context, state) {
+                            return Text(
+                              'EGP ${_productsCubit.productQuantity * (product.priceAfterDiscount ?? product.price)}',
+                              style: getMediumStyle(
+                                color: ColorManager.appBarTitle,
+                              ).copyWith(fontSize: 18.sp),
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
