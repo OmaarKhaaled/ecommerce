@@ -1,3 +1,5 @@
+import 'package:ecommerce/features/auth/domain/entities/user.dart';
+
 class UserModel {
   final String name;
   final String email;
